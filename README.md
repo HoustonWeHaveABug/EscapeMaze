@@ -13,7 +13,7 @@ Trolls will move in your direction at sight or depending on their smell (fresh m
 
 First you need to enter the settings for the game
 
-- View size (rows/columns), choose the value that will best fit your console
+- View size (rows/columns), choose the values that will best fit your console
 
 - Initial maze size (in terms of rooms, see below for different types of cell)
 
