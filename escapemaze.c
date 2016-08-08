@@ -51,48 +51,48 @@ typedef struct {
 	cell_t *next;
 	unsigned long n;
 }
-move_t;
+troll_move_t;
 
-int enter_parameter(const char *, unsigned long, unsigned long, unsigned long *);
+int enter_value(const char *, unsigned long, unsigned long, unsigned long *);
 int escape_maze(unsigned long);
 void init_room(room_t *);
 room_t *find_set(room_t *);
 void init_w_cell(room_t *);
 void init_n_cell(room_t *);
 void init_cell(cell_t *, int, room_t *);
-void set_visible(cell_t *);
-void check_move(cell_t *, cell_t *, cell_t *);
-void test_link(cell_t *, cell_t *);
+void set_cell_visible(cell_t *);
+void check_troll_move(cell_t *, cell_t *, cell_t *);
+void check_link(cell_t *, cell_t *);
 void add_to_queue(cell_t *, cell_t *, unsigned long);
-void add_move(cell_t *, cell_t *, unsigned long);
-void init_move(move_t *, cell_t *, cell_t *, unsigned long);
-void do_move(move_t *);
+void add_troll_move(cell_t *, cell_t *, unsigned long);
+void init_troll_move(troll_move_t *, cell_t *, cell_t *, unsigned long);
+void do_troll_move(troll_move_t *);
 unsigned long erand(unsigned long);
-int accessible_cell(cell_t *);
+int is_cell_accessible(cell_t *);
 void free_data(void);
 
 const char *decisions_room = "wnesWNESrq", *decisions_corridor = "wnesrq";
-unsigned long view_rows_n, view_columns_n, row_rooms_n, column_rooms_n, rooms_n, column_walls_n, row_walls_n, walls_n, *walls = NULL, row_cells_n, column_cells_n, cells_n, switch_power, trolls_n, smell_power, moves_n, q_cells_n;
+unsigned long view_rows_n, view_columns_n, row_rooms_n, column_rooms_n, rooms_n, column_walls_n, row_walls_n, walls_n, *walls = NULL, row_cells_n, column_cells_n, cells_n, switch_power, trolls_n, smell_power, troll_moves_n, q_cells_n;
 room_t *rooms = NULL;
 cell_t *cells = NULL, **q_cells = NULL;
-move_t *moves = NULL;
+troll_move_t *troll_moves = NULL;
 
 int main(void) {
-unsigned long rooms_n_max, q_cells_n_max, smell_power_max, row_rooms_n_inc, column_rooms_n_inc, switch_power_inc, trolls_n_inc, smell_power_inc, level, *wall;
+unsigned long rooms_n_max, q_cells_n_max, row_rooms_n_inc, column_rooms_n_inc, switch_power_inc, trolls_n_inc, smell_power_inc, level, *wall;
 room_t *room;
 cell_t *cell, **q_cell;
-move_t *move;
-	if (!enter_parameter("Number of rows in view", 3UL, ULONG_MAX, &view_rows_n)) {
+troll_move_t *troll_move;
+	if (!enter_value("Number of rows in view", 3UL, ULONG_MAX, &view_rows_n)) {
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Number of columns in view", 3UL, ULONG_MAX, &view_columns_n)) {
+	if (!enter_value("Number of columns in view", 3UL, ULONG_MAX, &view_columns_n)) {
 		return EXIT_FAILURE;
 	}
 	rooms_n_max = (ULONG_MAX-1)/2;
-	if (!enter_parameter("Initial number of rooms by row", 2UL, rooms_n_max, &row_rooms_n)) {
+	if (!enter_value("Initial number of rooms by row", 2UL, rooms_n_max, &row_rooms_n)) {
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Initial number of rooms by column", 2UL, rooms_n_max/row_rooms_n, &column_rooms_n)) {
+	if (!enter_value("Initial number of rooms by column", 2UL, rooms_n_max/row_rooms_n, &column_rooms_n)) {
 		return EXIT_FAILURE;
 	}
 	rooms_n = row_rooms_n*column_rooms_n;
@@ -126,42 +126,41 @@ move_t *move;
 		free_data();
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Initial switch power for player", 0UL, ULONG_MAX, &switch_power)) {
+	if (!enter_value("Initial switch power for player", 0UL, ULONG_MAX, &switch_power)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Initial number of trolls", 0UL, ULONG_MAX, &trolls_n)) {
+	if (!enter_value("Initial number of trolls", 0UL, ULONG_MAX, &trolls_n)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
-	moves = malloc(sizeof(move_t)*trolls_n);
-	if (!moves) {
-		fprintf(stderr, "Could not allocate memory for moves\n");
+	troll_moves = malloc(sizeof(troll_move_t)*trolls_n);
+	if (!troll_moves) {
+		fprintf(stderr, "Could not allocate memory for troll moves\n");
 		free_data();
 		return EXIT_FAILURE;
 	}
-	smell_power_max = row_cells_n+column_cells_n-6;
-	if (!enter_parameter("Initial smell power for trolls", 0UL, smell_power_max, &smell_power)) {
+	if (!enter_value("Initial smell power for trolls", 0UL, ULONG_MAX, &smell_power)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Number of rooms by row added at each level (if possible)", 0UL, rooms_n_max, &row_rooms_n_inc)) {
+	if (!enter_value("Number of rooms by row added at each level (if possible)", 0UL, rooms_n_max, &row_rooms_n_inc)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Number of rooms by column added at each level (if possible)", 0UL, rooms_n_max/row_rooms_n_inc, &column_rooms_n_inc)) {
+	if (!enter_value("Number of rooms by column added at each level (if possible)", 0UL, rooms_n_max/row_rooms_n_inc, &column_rooms_n_inc)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Switch power added at each level (if possible)", 0UL, ULONG_MAX, &switch_power_inc)) {
+	if (!enter_value("Switch power added at each level (if possible)", 0UL, ULONG_MAX, &switch_power_inc)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Number of trolls added at each level (if possible)", 0UL, ULONG_MAX, &trolls_n_inc)) {
+	if (!enter_value("Number of trolls added at each level (if possible)", 0UL, ULONG_MAX, &trolls_n_inc)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
-	if (!enter_parameter("Smell power added at each level (if possible)", 0UL, smell_power_max, &smell_power_inc)) {
+	if (!enter_value("Smell power added at each level (if possible)", 0UL, ULONG_MAX, &smell_power_inc)) {
 		free_data();
 		return EXIT_FAILURE;
 	}
@@ -216,15 +215,14 @@ move_t *move;
 		if (trolls_n+trolls_n_inc >= trolls_n) {
 			trolls_n += trolls_n_inc;
 		}
-		move = realloc(moves, sizeof(move_t)*trolls_n);
-		if (!move) {
-			fprintf(stderr, "Could not reallocate memory for moves\n");
+		troll_move = realloc(troll_moves, sizeof(troll_move_t)*trolls_n);
+		if (!troll_move) {
+			fprintf(stderr, "Could not reallocate memory for troll moves\n");
 			free_data();
 			return EXIT_FAILURE;
 		}
-		moves = move;
-		smell_power_max = row_cells_n+column_cells_n-6;
-		if (smell_power+smell_power_inc <= smell_power_max && smell_power+smell_power_inc >= smell_power) {
+		troll_moves = troll_move;
+		if (smell_power+smell_power_inc >= smell_power) {
 			smell_power += smell_power_inc;
 		}
 		level++;
@@ -233,7 +231,7 @@ move_t *move;
 	return EXIT_SUCCESS;
 }
 
-int enter_parameter(const char *name, unsigned long min, unsigned long max, unsigned long *value) {
+int enter_value(const char *name, unsigned long min, unsigned long max, unsigned long *value) {
 	printf("%s [%lu-%lu] ? ", name, min, max);
 	if (scanf("%lu", value) != 1 || *value < min || *value > max) {
 		fprintf(stderr, "Value is invalid or out of range\n");
@@ -353,54 +351,54 @@ cell_t *cell_exit, *player_last, *player_next, *cell;
 	do {
 		player_last = cells+erand(cells_n);
 	}
-	while (!accessible_cell(player_last));
+	while (!is_cell_accessible(player_last));
 	for (i = 0; i < trolls_n; i++) {
 		do {
 			cell = cells+erand(cells_n);
 		}
-		while (!accessible_cell(cell) || cell == player_last);
+		while (!is_cell_accessible(cell) || cell == player_last);
 		cell->trolls_n++;
 	}
 	trolls_n_cur = trolls_n;
 	for (i = 0; i < cells_n; i++) {
 		cells[i].mask = CELL_HIDDEN;
 	}
-	set_visible(player_last);
+	set_cell_visible(player_last);
 	escaped = 0;
 	do {
 		if (player_last != cell_exit && !player_last->trolls_n) {
 			cell = player_last;
 			do {
 				cell--;
-				set_visible(cell+column_cells_n);
-				set_visible(cell);
-				set_visible(cell-column_cells_n);
+				set_cell_visible(cell+column_cells_n);
+				set_cell_visible(cell);
+				set_cell_visible(cell-column_cells_n);
 			}
-			while (accessible_cell(cell) && !cell->trolls_n);
+			while (is_cell_accessible(cell) && !cell->trolls_n);
 			cell = player_last;
 			do {
 				cell -= column_cells_n;
-				set_visible(cell-1);
-				set_visible(cell);
-				set_visible(cell+1);
+				set_cell_visible(cell-1);
+				set_cell_visible(cell);
+				set_cell_visible(cell+1);
 			}
-			while (accessible_cell(cell) && !cell->trolls_n);
+			while (is_cell_accessible(cell) && !cell->trolls_n);
 			cell = player_last;
 			do {
 				cell++;
-				set_visible(cell-column_cells_n);
-				set_visible(cell);
-				set_visible(cell+column_cells_n);
+				set_cell_visible(cell-column_cells_n);
+				set_cell_visible(cell);
+				set_cell_visible(cell+column_cells_n);
 			}
-			while (accessible_cell(cell) && !cell->trolls_n);
+			while (is_cell_accessible(cell) && !cell->trolls_n);
 			cell = player_last;
 			do {
 				cell += column_cells_n;
-				set_visible(cell+1);
-				set_visible(cell);
-				set_visible(cell-1);
+				set_cell_visible(cell+1);
+				set_cell_visible(cell);
+				set_cell_visible(cell-1);
 			}
-			while (accessible_cell(cell) && !cell->trolls_n);
+			while (is_cell_accessible(cell) && !cell->trolls_n);
 		}
 		cell = cells+cells_n-column_cells_n;
 		for (cell_column_min = 0; cell_column_min < column_cells_n; cell_column_min++) {
@@ -452,7 +450,6 @@ cell_t *cell_exit, *player_last, *player_next, *cell;
 		for (cell = cells+column_cells_n*player_row; cell < player_last; cell++) {
 			player_column++;
 		}
-		printf("row %lu column %lu\n", player_row, player_column);
 		while (cell_row_max-cell_row_min > view_rows_n) {
 			if (player_row-cell_row_min > cell_row_max-player_row) {
 				cell_row_min++;
@@ -532,12 +529,12 @@ cell_t *cell_exit, *player_last, *player_next, *cell;
 				else {
 					player_next = player_last;
 				}
-				moves_n = 0;
+				troll_moves_n = 0;
 				for (i = 0; i < cells_n; i++) {
-					check_move(cells+i, player_last, player_next);
+					check_troll_move(cells+i, player_last, player_next);
 				}
 				if (direction == decision) {
-					if (accessible_cell(player_next) || player_next == cell_exit) {
+					if (is_cell_accessible(player_next) || player_next == cell_exit) {
 						player_last = player_next;
 					}
 				}
@@ -553,8 +550,8 @@ cell_t *cell_exit, *player_last, *player_next, *cell;
 						player_next->type = TYPE_CORRIDOR;
 					}
 				}
-				for (i = 0; i < moves_n; i++) {
-					do_move(moves+i);
+				for (i = 0; i < troll_moves_n; i++) {
+					do_troll_move(troll_moves+i);
 				}
 			}
 		}
@@ -590,13 +587,13 @@ void init_cell(cell_t *cell, int type, room_t *room) {
 	cell->trolls_n = 0;
 }
 
-void set_visible(cell_t *cell) {
+void set_cell_visible(cell_t *cell) {
 	if (cell->mask & CELL_HIDDEN) {
 		cell->mask -= CELL_HIDDEN;
 	}
 }
 
-void check_move(cell_t *last, cell_t *player_last, cell_t *player_next) {
+void check_troll_move(cell_t *last, cell_t *player_last, cell_t *player_next) {
 int found;
 unsigned long i, j, k;
 cell_t *cell_w, *cell_n, *cell_e, *cell_s, *cell;
@@ -605,84 +602,84 @@ cell_t *cell_w, *cell_n, *cell_e, *cell_s, *cell;
 		do {
 			cell_w--;
 		}
-		while (accessible_cell(cell_w) && cell_w != player_last);
+		while (is_cell_accessible(cell_w) && cell_w != player_last);
 		cell_n = last;
 		if (cell_w != player_last) {
 			do {
 				cell_n -= column_cells_n;
 			}
-			while (accessible_cell(cell_n) && cell_n != player_last);
+			while (is_cell_accessible(cell_n) && cell_n != player_last);
 		}
 		cell_e = last;
 		if (cell_w != player_last && cell_n != player_last) {
 			do {
 				cell_e++;
 			}
-			while (accessible_cell(cell_e) && cell_e != player_last);
+			while (is_cell_accessible(cell_e) && cell_e != player_last);
 		}
 		cell_s = last;
 		if (cell_w != player_last && cell_n != player_last && cell_e != player_last) {
 			do {
 				cell_s += column_cells_n;
 			}
-			while (accessible_cell(cell_s) && cell_s != player_last);
+			while (is_cell_accessible(cell_s) && cell_s != player_last);
 		}
 		if (cell_w == player_last) {
-			add_move(last, last-1, last->trolls_n);
+			add_troll_move(last, last-1, last->trolls_n);
 		}
 		else if (cell_n == player_last) {
-			add_move(last, last-column_cells_n, last->trolls_n);
+			add_troll_move(last, last-column_cells_n, last->trolls_n);
 		}
 		else if (cell_e == player_last) {
-			add_move(last, last+1, last->trolls_n);
+			add_troll_move(last, last+1, last->trolls_n);
 		}
 		else if (cell_s == player_last) {
-			add_move(last, last+column_cells_n, last->trolls_n);
+			add_troll_move(last, last+column_cells_n, last->trolls_n);
 		}
 		else {
 			q_cells_n = 0;
 			add_to_queue(last, NULL, 0UL);
 			for (i = 0; i < q_cells_n && q_cells[i] != player_last && q_cells[i]->distance <= smell_power; i++) {
-				test_link(q_cells[i], q_cells[i]-1);
-				test_link(q_cells[i], q_cells[i]-column_cells_n);
-				test_link(q_cells[i], q_cells[i]+1);
-				test_link(q_cells[i], q_cells[i]+column_cells_n);
+				check_link(q_cells[i], q_cells[i]-1);
+				check_link(q_cells[i], q_cells[i]-column_cells_n);
+				check_link(q_cells[i], q_cells[i]+1);
+				check_link(q_cells[i], q_cells[i]+column_cells_n);
 			}
 			found = i < q_cells_n && q_cells[i]->distance <= smell_power;
 			if (found) {
 				for (cell = q_cells[i]; cell->distance > 1; cell = cell->from);
-				add_move(last, cell, last->trolls_n);
+				add_troll_move(last, cell, last->trolls_n);
 			}
 			for (i = 0; i < q_cells_n; i++) {
 				q_cells[i]->mask -= CELL_VISITED;
 			}
 			if (!found) {
-				for (i = 0; i < last->trolls_n; i++) {
-					q_cells_n = 0;
-					add_to_queue(last, NULL, 0UL);
-					for (j = 0; j < q_cells_n && q_cells[j]->distance < 2; j++) {
-						test_link(q_cells[j], q_cells[j]-1);
-						test_link(q_cells[j], q_cells[j]-column_cells_n);
-						test_link(q_cells[j], q_cells[j]+1);
-						test_link(q_cells[j], q_cells[j]+column_cells_n);
-					}
-					if (j) {
-						k = erand(j);
+				q_cells_n = 0;
+				add_to_queue(last, NULL, 0UL);
+				for (i = 0; i < q_cells_n && q_cells[i]->distance < 2; i++) {
+					check_link(q_cells[i], q_cells[i]-1);
+					check_link(q_cells[i], q_cells[i]-column_cells_n);
+					check_link(q_cells[i], q_cells[i]+1);
+					check_link(q_cells[i], q_cells[i]+column_cells_n);
+				}
+				if (i > 1) {
+					for (j = 0; j < last->trolls_n; j++) {
+						k = erand(i);
 						if (k) {
-							add_move(last, q_cells[k], 1UL);
+							add_troll_move(last, q_cells[k], 1UL);
 						}
 					}
-					for (j = 0; j < q_cells_n; j++) {
-						q_cells[j]->mask -= CELL_VISITED;
-					}
+				}
+				for (i = 0; i < q_cells_n; i++) {
+					q_cells[i]->mask -= CELL_VISITED;
 				}
 			}
 		}
 	}
 }
 
-void test_link(cell_t *from, cell_t *to) {
-	if (accessible_cell(to) && !(to->mask & CELL_VISITED)) {
+void check_link(cell_t *from, cell_t *to) {
+	if (is_cell_accessible(to) && !(to->mask & CELL_VISITED)) {
 		add_to_queue(to, from, from->distance+1);
 	}
 }
@@ -694,21 +691,21 @@ void add_to_queue(cell_t *cell, cell_t *from, unsigned long distance) {
 	q_cells[q_cells_n++] = cell;
 }
 
-void add_move(cell_t *last, cell_t *next, unsigned long n) {
-	init_move(moves+moves_n, last, next, n);
-	moves_n++;
+void add_troll_move(cell_t *last, cell_t *next, unsigned long n) {
+	init_troll_move(troll_moves+troll_moves_n, last, next, n);
+	troll_moves_n++;
 }
 
-void init_move(move_t *move, cell_t *last, cell_t *next, unsigned long n) {
-	move->last = last;
-	move->next = next;
-	move->n = n;
+void init_troll_move(troll_move_t *troll_move, cell_t *last, cell_t *next, unsigned long n) {
+	troll_move->last = last;
+	troll_move->next = next;
+	troll_move->n = n;
 }
 
-void do_move(move_t *move) {
-	if (accessible_cell(move->next)) {
-		move->last->trolls_n -= move->n;
-		move->next->trolls_n += move->n;
+void do_troll_move(troll_move_t *troll_move) {
+	if (is_cell_accessible(troll_move->next)) {
+		troll_move->last->trolls_n -= troll_move->n;
+		troll_move->next->trolls_n += troll_move->n;
 	}
 }
 
@@ -716,13 +713,13 @@ unsigned long erand(unsigned long values) {
 	return (unsigned long)(rand()/(RAND_MAX+1.0)*values);
 }
 
-int accessible_cell(cell_t *cell) {
+int is_cell_accessible(cell_t *cell) {
 	return cell->type == TYPE_ROOM || cell->type == TYPE_CORRIDOR;
 }
 
 void free_data(void) {
-	if (moves) {
-		free(moves);
+	if (troll_moves) {
+		free(troll_moves);
 	}
 	if (q_cells) {
 		free(q_cells);
